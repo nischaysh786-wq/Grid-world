@@ -55,17 +55,29 @@ This project demonstrates how **Reinforcement Learning (RL)** can be used to tra
 Grid-world/
 │
 ├── app.py # Flask web application
+
 ├── env.py / gridworld.py # Environment logic
+
 ├── ppo.py # PPO algorithm implementation
+
 ├── train.py # Script to train the PPO agent
+
 ├── play.py # Run the trained agent
+
 ├── ppo_agent.pth # Pre-trained PPO model
+
 ├── ppo_cnn_agent.pth # CNN-based PPO model
+
 ├── replay.json # Stored gameplay or training replay
+
 ├── templates/
+
 │ └── index.html # Web interface template
+
 ├── requirements.txt # Python dependencies
+
 ├── .gitignore # Ignored files and folders
+
 └── README.md # Project documentation
 
 
