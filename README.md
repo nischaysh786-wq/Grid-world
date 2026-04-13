@@ -88,6 +88,9 @@ Grid-world/
 ### 🖼️ Image 1
 ![Image 1](image/image1.png)
 
+### 🖼️ Image 2
+![Image 2](image/image2.png)
+
 ### 🖼️ Image 4
 ![Image 4](image/image4.png)
 
