@@ -1,33 +1,57 @@
 # 🧠 GridWorld Reinforcement Learning with PPO
 
-A comprehensive **Reinforcement Learning** project that implements an intelligent agent capable of autonomously navigating a **GridWorld** environment using the **Proximal Policy Optimization (PPO)** algorithm. The project also features a **Flask-based web interface** for interactive visualization and gameplay.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.9%2B-blue.svg" />
+  <img src="https://img.shields.io/badge/PyTorch-Deep%20Learning-red.svg" />
+  <img src="https://img.shields.io/badge/Flask-Web%20App-black.svg" />
+  <img src="https://img.shields.io/badge/Reinforcement%20Learning-PPO-green.svg" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" />
+</p>
+
+<p align="center">
+  <b>An intelligent Reinforcement Learning agent that autonomously navigates a GridWorld environment using the Proximal Policy Optimization (PPO) algorithm, with an interactive Flask-based web interface.</b>
+</p>
+
+---
+
+## 📖 Overview
+
+This project demonstrates how **Reinforcement Learning (RL)** can be used to train an intelligent agent to navigate a **GridWorld** environment. The agent is trained using the **Proximal Policy Optimization (PPO)** algorithm and can be visualized through a **Flask-based web interface**.
+
+### 🎯 Key Objectives
+- Train an autonomous agent using PPO.
+- Provide an interactive visualization of the agent’s behavior.
+- Offer a modular and extensible environment for experimentation.
+- Serve as an educational and research tool for Reinforcement Learning.
 
 ---
 
 ## 🚀 Features
 
-- 🎮 **Custom GridWorld Environment**
-  - Configurable grid size with obstacles, goals, and penalties.
-  - Deterministic and extensible environment design.
-  - Suitable for experimentation and educational purposes.
+### 🎮 Custom GridWorld Environment
+- Configurable **grid size**, **obstacles**, **goals**, and **penalties**.
+- Deterministic and extensible design.
+- Ideal for experimentation and academic demonstrations.
 
-- 🤖 **PPO Reinforcement Learning Agent**
-  - Implementation of the **Proximal Policy Optimization (PPO)** algorithm.
-  - Supports both standard and CNN-based policies.
-  - Includes pre-trained models for quick testing and demonstration.
+### 🤖 PPO Reinforcement Learning Agent
+- Implementation of the **Proximal Policy Optimization (PPO)** algorithm.
+- Supports both **standard** and **CNN-based** policies.
+- Includes **pre-trained models** for immediate testing.
 
-- 🌐 **Interactive Web Interface**
-  - Built using **Flask**.
-  - Visualizes agent movements in real time.
-  - User-friendly browser-based interaction.
+### 🌐 Interactive Web Interface
+- Built with **Flask** for real-time interaction.
+- Visualizes agent movements and environment states.
+- Simple and user-friendly browser interface.
 
-- 📊 **Training & Replay**
-  - Complete training pipeline for developing intelligent agents.
-  - Replay functionality for analyzing agent behavior.
+### 📊 Training & Replay
+- Complete training pipeline.
+- Replay functionality to analyze agent behavior.
+- Easy experimentation with different parameters.
 
 ---
 
 ## 📁 Project Structure
+
 Grid-world/
 │
 ├── app.py # Flask web application
@@ -41,79 +65,86 @@ Grid-world/
 ├── templates/
 │ └── index.html # Web interface template
 ├── requirements.txt # Python dependencies
+├── .gitignore # Ignored files and folders
 └── README.md # Project documentation
+
+
 
 ---
 
-## 🛠️ Installation
+## 🛠️ Quick Start (All-in-One Setup)
 
-### 1️⃣ Clone the Repository
+Run the following commands to set up the project, install dependencies, and launch the application:
+
 ```bash
+# Clone the repository
 git clone https://github.com/nischaysh786-wq/Grid-world.git
 cd Grid-world
-2️⃣ Create a Virtual Environment
+
+# Create and activate a virtual environment
 python3 -m venv venv
-source venv/bin/activate      # On macOS/Linux
-# venv\Scripts\activate       # On Windows
-3️⃣ Install Dependencies
-pip install -r requirements.txt
-If requirements.txt is not available, generate it using:
-pip freeze > requirements.txt
-🧠 Training the Agent
-Train a new PPO agent from scratch:
+source venv/bin/activate          # macOS/Linux
+# venv\Scripts\activate           # Windows
+
+# Upgrade pip and install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt || pip install flask torch numpy
+
+# (Optional) Train the PPO agent
 python train.py
-The trained model weights will be saved as .pth files.
-🎮 Running the Agent (Command Line)
-To run the trained agent in the GridWorld environment:
+
+# Run the trained agent via CLI
 python play.py
-🌐 Running the Web Application
-Start the Flask-based web interface:
+
+# Launch the Flask web application
 python app.py
-Then open your browser and navigate to:
-http://localhost:8000
-This interface allows you to visualize the GridWorld and observe the agent’s behavior in real time.
-📊 Model Files
-File	Description
-ppo_agent.pth	Pre-trained PPO model
-ppo_cnn_agent.pth	CNN-based PPO model
-replay.json	Stored gameplay or training replay
-🧩 Technologies Used
-Python 3.9+
-PyTorch – Deep learning framework
-Flask – Web application framework
-NumPy – Numerical computations
-HTML/CSS/JavaScript – Frontend visualization
-Reinforcement Learning (PPO) – Autonomous agent training
-📈 Use Cases
-Academic and educational demonstrations of reinforcement learning.
-Research and experimentation with PPO algorithms.
-Visualization of intelligent agent behavior in grid-based environments.
-AI and game development projects.
-🧹 .gitignore Recommendations
-Ensure the following entries exist in your .gitignore:
-venv/
-env/
-.venv/
-__pycache__/
-*.py[cod]
-.DS_Store
-*.log
-.vscode/
-.idea/
-*.pth
-*.pt
-🤝 Contributing
-Contributions are welcome! If you’d like to improve this project:
-Fork the repository.
-Create a new branch:
-git checkout -b feature/YourFeature
-Commit your changes:
-git commit -m "Add your feature"
-Push to the branch:
-git push origin feature/YourFeature
-Open a Pull Request.
-📄 License
-This project is licensed under the MIT License. Feel free to use and modify it for academic and commercial purposes.
-👨‍💻 Author
-Nischay
-GitHub: https://github.com/nischaysh786-wq
+
+
+---
+
+## 🛠️ Quick Start (All-in-One Setup)
+
+Run the following commands to set up the project, install dependencies, and launch the application:
+
+```bash
+# Clone the repository
+git clone https://github.com/nischaysh786-wq/Grid-world.git
+cd Grid-world
+
+# Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate          # macOS/Linux
+# venv\Scripts\activate           # Windows
+
+# Upgrade pip and install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt || pip install flask torch numpy
+
+# (Optional) Train the PPO agent
+python train.py
+
+# Run the trained agent via CLI
+python play.py
+# Launch the Flask web application
+python app.py
+
+
+---
+##| File                | Description                        |
+| ------------------- | ---------------------------------- |
+| `ppo_agent.pth`     | Pre-trained PPO model              |
+| `ppo_cnn_agent.pth` | CNN-based PPO model                |
+| `replay.json`       | Stored gameplay or training replay |
+
+---
+| File                | Description                        |
+| ------------------- | ---------------------------------- |
+| `ppo_agent.pth`     | Pre-trained PPO model              |
+| `ppo_cnn_agent.pth` | CNN-based PPO model                |
+| `replay.json`       | Stored gameplay or training replay |
+
+
+
+
+
+
