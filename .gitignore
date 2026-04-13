@@ -1,0 +1,22 @@
+# Python virtual environment
+venv/
+env/
+.venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# macOS system files
+.DS_Store
+
+# Logs
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# Large model files (optional)
+*.pth
+*.pt
