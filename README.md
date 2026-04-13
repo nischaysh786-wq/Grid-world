@@ -91,7 +91,7 @@ Grid-world/
 ### 🖼️ Image 2
 ![Image 2](image/image2.png)
 
-### 🖼️ Image 4
+### 🖼️ Image 3
 ![Image 4](image/image4.png)
 
 ---
