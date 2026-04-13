@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unity-style GridWorld PPO</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #798D98; font-family: sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        #ui-layer {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(40, 40, 40, 0.85); padding: 15px 30px; border-radius: 12px;
+            display: flex; gap: 15px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            color: white; width: 400px; backdrop-filter: blur(5px);
+        }
+        #ui-layer button {
+            background: #4CAF50; color: white; border: none; padding: 8px 16px; 
+            border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;
+        }
+        #ui-layer button:hover { background: #45a049; }
+        #timeline { flex-grow: 1; cursor: pointer; }
+        
+        /* Agent View Minimap overlay just like the Unity image */
+        #minimap-container {
+            position: absolute; top: 20px; left: 20px;
+            width: 200px; height: 200px; background: #3b3f42;
+            border: 4px solid #8e959b; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; align-items: center;
+        }
+        #minimap { width: 100%; height: 100%; background: #303336; }
+        .minimap-label {
+            position: absolute; bottom: -45px;
+            text-align: center; color: #333; font-weight: bold;
+            font-size: 14px; width: 100%; text-shadow: 0px 1px 1px rgba(255,255,255,0.3);
+        }
+    </style>
+    <!-- Load Three.js safely from cdnjs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+    
+    <div id="minimap-container">
+        <canvas id="minimap"></canvas>
+        <div class="minimap-label">Agent View<br>(RenderTexture)</div>
+    </div>
+    
+    <div id="ui-layer">
+        <button id="playBtn">Pause</button>
+        <input type="range" id="timeline" min="0" max="499" value="0">
+        <span id="stepDisplay">Step 0</span>
+    </div>
+
+    <script>
+        const canvasContainer = document.getElementById('canvas-container');
+        const viewWidth = window.innerWidth;
+        const viewHeight = window.innerHeight;
+        
+        const scene = new THREE.Scene();
+        
+        // Isometric Orthographic Camera setup
+        const aspect = viewWidth / viewHeight;
+        const frustumSize = 27; // How much of the scene to show
+        const camera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, -100, 1000);
+        camera.position.set(30, 30, 30); // Isometric angle
+        camera.lookAt(10, 0, 10); // Look at center of a 20x20 grid
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(viewWidth, viewHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        canvasContainer.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 30, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.left = -15;
+        dirLight.shadow.camera.right = 15;
+        dirLight.shadow.camera.top = 15;
+        dirLight.shadow.camera.bottom = -15;
+        scene.add(dirLight);
+
+        // Grid Base parameters
+        const gridSize = 20;
+        const tileSize = 1;
+        const wallThickness = 1.5;
+        const wallHeight = 1.5;
+
+        // Colors
+        const colFloor = 0x3b3f42;
+        const colFloorLines = 0x4f5459;
+        const colWall = 0x8e959b;
+        const colObstacle = 0x303336;
+        const colRedTarget = 0xe54d42;
+        const colGreenTarget = 0x76c976;
+        
+        // Agent Colors dictionary
+        const colorMap = {
+            "Blue": 0x3498db, "Yellow": 0xf1c40f, "Cyan": 0x00ffff, "Magenta": 0xe056fd,
+            "White": 0xffffff, "Orange": 0xe67e22, "Purple": 0x9b59b6, "Pink": 0xfd79a8, "Brown": 0x8e44ad
+        };
+
+        // Floor Platform
+        const floorGeo = new THREE.BoxGeometry(gridSize, 0.2, gridSize);
+        const floorMat = new THREE.MeshStandardMaterial({ color: colFloor, roughness: 0.8 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.position.set(gridSize/2 - 0.5, -0.1, gridSize/2 - 0.5);
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Grid Helper
+        const gridHelper = new THREE.GridHelper(gridSize, gridSize, colFloorLines, colFloorLines);
+        gridHelper.position.set(gridSize/2 - 0.5, 0.01, gridSize/2 - 0.5);
+        scene.add(gridHelper);
+
+        // Walls
+        const wallMat = new THREE.MeshStandardMaterial({ color: colWall, roughness: 0.6 });
+        const walls = [
+            { w: gridSize + wallThickness*2, h: wallHeight, d: wallThickness, x: gridSize/2 - 0.5, y: wallHeight/2 - 0.2, z: -wallThickness/2 - 0.5 },
+            { w: gridSize + wallThickness*2, h: wallHeight, d: wallThickness, x: gridSize/2 - 0.5, y: wallHeight/2 - 0.2, z: gridSize + wallThickness/2 - 0.5 },
+            { w: wallThickness, h: wallHeight, d: gridSize, x: -wallThickness/2 - 0.5, y: wallHeight/2 - 0.2, z: gridSize/2 - 0.5 },
+            { w: wallThickness, h: wallHeight, d: gridSize, x: gridSize + wallThickness/2 - 0.5, y: wallHeight/2 - 0.2, z: gridSize/2 - 0.5 }
+        ];
+        
+        walls.forEach(w => {
+            let m = new THREE.Mesh(new THREE.BoxGeometry(w.w, w.h, w.d), wallMat);
+            m.position.set(w.x, w.y, w.z);
+            m.castShadow = true; m.receiveShadow = true; scene.add(m);
+        });
+
+        // Shared Geometries
+        const obsGeo = new THREE.BoxGeometry(1, 1, 1);
+        const obsMat = new THREE.MeshStandardMaterial({ color: colObstacle });
+        const agentGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+        
+        function createCrossGeometry(color) {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
+            const v = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), mat);
+            const h = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 0.3), mat);
+            v.castShadow = true; v.receiveShadow = true;
+            h.castShadow = true; h.receiveShadow = true;
+            group.add(v); group.add(h);
+            return group;
+        }
+
+        let obstacleMeshes = [];
+        let agentMeshes = {};
+        let greenMeshes = {};
+        let redMeshes = {};
+
+        // Minimap
+        const minimapCanvas = document.getElementById("minimap");
+        minimapCanvas.width = gridSize * 10; minimapCanvas.height = gridSize * 10;
+        const ctx = minimapCanvas.getContext("2d");
+
+        let replayData = null;
+        let currentStep = 0;
+        let isPlaying = true;
+        let playInterval = null;
+
+        fetch('replay.json').then(r => r.json()).then(data => {
+            replayData = data;
+            document.getElementById("timeline").max = data.steps.length - 1;
+            
+            data.obstacles.forEach(pos => {
+                let m = new THREE.Mesh(obsGeo, obsMat);
+                m.position.set(pos[1], 0.5, pos[0]);
+                m.castShadow = true; m.receiveShadow = true; scene.add(m);
+            });
+            startPlayback();
+        });
+
+        function clearTargets(meshDict) {
+            for(let key in meshDict) scene.remove(meshDict[key]);
+            return {};
+        }
+
+        function updateScene(stepIdx) {
+            if (!replayData) return;
+            const stepData = replayData.steps[stepIdx];
+            document.getElementById("stepDisplay").innerText = `Step ${stepIdx}`;
+            
+            stepData.agents.forEach(ag => {
+                if (!agentMeshes[ag.id]) {
+                    const mat = new THREE.MeshStandardMaterial({ color: colorMap[ag.color] || colFloor, roughness: 0.2 });
+                    const am = new THREE.Mesh(agentGeo, mat);
+                    am.castShadow = true; am.receiveShadow = true;
+                    scene.add(am); agentMeshes[ag.id] = am;
+                }
+                // Transition target
+                agentMeshes[ag.id].position.set(ag.pos[1], 0.4, ag.pos[0]);
+            });
+
+            greenMeshes = clearTargets(greenMeshes);
+            stepData.green_goals.forEach((gp, i) => {
+                const gm = createCrossGeometry(colGreenTarget);
+                gm.position.set(gp[1], 0.4, gp[0]); scene.add(gm); greenMeshes[i] = gm;
+            });
+
+            redMeshes = clearTargets(redMeshes);
+            stepData.red_goals.forEach((rp, i) => {
+                const rm = createCrossGeometry(colRedTarget);
+                rm.position.set(rp[1], 0.4, rp[0]); scene.add(rm); redMeshes[i] = rm;
+            });
+            
+            drawMinimap(stepData);
+        }
+
+        function drawMinimap(stepData) {
+            ctx.fillStyle = "#303336"; ctx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+            const ts = minimapCanvas.width / gridSize;
+            
+            ctx.strokeStyle = "#4f5459"; ctx.lineWidth = 1;
+            for(let i=0; i<=gridSize; i++){
+                ctx.beginPath(); ctx.moveTo(i*ts, 0); ctx.lineTo(i*ts, minimapCanvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i*ts); ctx.lineTo(minimapCanvas.width, i*ts); ctx.stroke();
+            }
+
+            ctx.fillStyle = "#222222";
+            replayData.obstacles.forEach(p => ctx.fillRect(p[1]*ts, p[0]*ts, ts, ts));
+
+            stepData.green_goals.forEach(p => drawMiniCross(p[1]*ts + ts/2, p[0]*ts + ts/2, ts*0.6, "#76c976"));
+            stepData.red_goals.forEach(p => drawMiniCross(p[1]*ts + ts/2, p[0]*ts + ts/2, ts*0.6, "#e54d42"));
+
+            stepData.agents.forEach(a => {
+                ctx.lineWidth = 2; ctx.strokeStyle = "#3498db";
+                ctx.strokeRect(a.pos[1]*ts + 2, a.pos[0]*ts + 2, ts - 4, ts - 4);
+            });
+        }
+        
+        function drawMiniCross(cx, cy, size, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(cx - size/6, cy - size/2, size/3, size);
+            ctx.fillRect(cx - size/2, cy - size/6, size, size/3);
+        }
+
+        function startPlayback() {
+            if (playInterval) clearInterval(playInterval);
+            playInterval = setInterval(() => {
+                currentStep++;
+                if (currentStep >= replayData.steps.length) currentStep = 0;
+                document.getElementById("timeline").value = currentStep;
+                updateScene(currentStep);
+            }, 60);
+            isPlaying = true; document.getElementById("playBtn").innerText = "Pause";
+        }
+        
+        function pausePlayback() {
+            clearInterval(playInterval);
+            isPlaying = false; document.getElementById("playBtn").innerText = "Play";
+        }
+
+        document.getElementById("playBtn").addEventListener("click", () => isPlaying ? pausePlayback() : startPlayback());
+        document.getElementById("timeline").addEventListener("input", (e) => { pausePlayback(); currentStep = parseInt(e.target.value); updateScene(currentStep); });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            for(let key in greenMeshes) greenMeshes[key].rotation.y += 0.05;
+            for(let key in redMeshes) redMeshes[key].rotation.y += 0.05;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.left = -frustumSize * aspect / 2; camera.right = frustumSize * aspect / 2;
+            camera.top = frustumSize / 2; camera.bottom = -frustumSize / 2;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
